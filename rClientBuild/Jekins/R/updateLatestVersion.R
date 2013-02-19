@@ -10,12 +10,18 @@ library("RCurl") # includes base64()
 library("digest") # includes hmac()
 
 # get the version of this package (assumed to be the latest) and put it in the public 'versions' resource
-updateLatestVersion<-function(versionsEndpoint, awsAccessKeyId, secretAccessKey, releaseNotes=NULL) {
+# Note:  'versionsEndpoint' is simply the bucket name, e.g. "versions.synapse.sagebase.org"
+updateLatestVersion<-function(versionsEndpoint, awsAccessKeyId, secretAccessKey) {
   targetFileName<-"synapseRClient"
   uri <- sprintf("%s/%s", versionsEndpoint, targetFileName)
   fileContent<-fromJSON(getURL(uri))
-  fileContent$latestVersion<-packageDescription("synapseClient", fields="Version")
-  if (!is.null(releaseNotes)) fileContent$releaseNotes<-releaseNotes
+  fileContent$latestVersion<-packageDescription("synapseClient", field="Version")
+  releaseNotes<-packageDescription("synapseClient", field="ReleaseNotes")
+  if (is.null(releaseNotes) | is.na(releaseNotes)) {
+    fileContent$releaseNotes<-""
+  } else {
+    fileContent$releaseNotes<-releaseNotes
+  }
   # now upload to S3
   bucket <- versionsEndpoint
   uploadToS3File(toJSON(fileContent), bucket, targetFileName, awsAccessKeyId, secretAccessKey)

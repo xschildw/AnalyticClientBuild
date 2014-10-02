@@ -170,22 +170,24 @@ createMimeTypeMap<-function() {
 generateHtmlDocs<-function(bucket, awsAccessKeyId, secretAccessKey) {
   fileURL<-getArtifactURL()
   # now download
-  localFilePath<-file.path(tempdir(), basename(fileURL))
+  scratchdir<-file.path(tempdir(), "scratch")
+  if (!dir.create(scratchdir)) stop(sprintf("could not create %s", scratchdir))  
+  localFilePath<-file.path(scratchdir, basename(fileURL))
   download.file(fileURL, localFilePath)
-  # now unzip into tempdir
-  result<-system(sprintf("cd %s; tar xzf %s", tempdir(), localFilePath))
+  # now unzip into scratchdir
+  result<-system(sprintf("cd %s; tar xzf %s", scratchdir, localFilePath))
   if (result!=0) stop(sprintf("Could not gunzip %s", localFilePath))
   cat("Successfully unzipped tar.gz file.\n")
   # make a subdir 'staticdocs'
-  docsdir<-file.path(tempdir(), "synapseClient/staticdocs")
+  docsdir<-file.path(scratchdir, "synapseClient/staticdocs")
   if (!dir.create(docsdir)) stop(sprintf("could not create %s", docsdir))
   cat("Successfully created staticdocs sub-directory.\n")
   library(staticdocs)
   cat("Loaded staticdocs package.\n")
-  build_site(pkg=file.path(tempdir(), "synapseClient"),examples=FALSE,launch=FALSE)
+  build_site(pkg=file.path(scratchdir, "synapseClient"),examples=FALSE,launch=FALSE)
   cat("Created the html documentation.\n")
-  # now upload tempdir()/synapseClient/inst/web to S3 (is the bucket called "http://r-docs.synapse.org"??)
-  uploadFolderToS3(file.path(tempdir(), "synapseClient/inst/web"), NULL, bucket, awsAccessKeyId, secretAccessKey, createMimeTypeMap())
+  # now upload <scratchdir>/synapseClient/inst/web to S3 (is the bucket called "http://r-docs.synapse.org"??)
+  uploadFolderToS3(file.path(scratchdir, "synapseClient/inst/web"), NULL, bucket, awsAccessKeyId, secretAccessKey, createMimeTypeMap())
 }
 
 

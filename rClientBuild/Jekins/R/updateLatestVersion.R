@@ -9,22 +9,47 @@ library("RJSONIO")
 library("RCurl") # includes base64()
 library("digest") # includes hmac()
 
+getDepotRepo<-function() {
+    repo<-contrib.url("http://depot.sagebase.org/CRAN/prod/3.1")
+  # the above should return something like:
+  # http://depot.sagebase.org/CRAN/prod/3.1/src/contrib
+  repo <-gsub("2.15", "3.1", repo, fixed=T)
+  repo <-gsub("3.0", "3.1", repo, fixed=T)
+  repo
+}
+
+getLatestVersion<-function() {
+  repo<-getDepotRepo()
+  ap <- available.packages(repo)
+  if (any(dimnames(ap)[[1]]=="synapseClient")) {
+    scVersion <- ap['synapseClient','Version']
+  } else {
+    stop(sprintf("Unable to find current R client version in this repo %s", repo))
+  } 
+  scVersion
+}
+
+getArtifactURL<-function() {
+  repo<-getDepotRepo()
+  scVersion<-getLatestVersion()
+  # the artifact's URL will look something like:
+  # http://depot.sagebase.org/CRAN/prod/3.1/src/contrib/synapseClient_1.4-4.tar.gz
+  fileName<-sprintf("synapseClient_%s.tar.gz", scVersion)
+  fileURL<-sprintf("%s/%s", repo, fileName)
+  fileURL
+}
+
 # get the version of this package (assumed to be the latest) and put it in the public 'versions' resource
 # Note:  'versionsEndpoint' is simply the bucket name, e.g. "versions.synapse.sagebase.org"
 updateLatestVersion<-function(versionsEndpoint, awsAccessKeyId, secretAccessKey) {
   targetFileName<-"synapseRClient"
   uri <- sprintf("%s/%s", versionsEndpoint, targetFileName)
   fileContent<-fromJSON(getURL(uri))
-  fileContent$latestVersion<-packageDescription("synapseClient", field="Version")
-  releaseNotes<-packageDescription("synapseClient", field="ReleaseNotes")
-  if (is.null(releaseNotes) | is.na(releaseNotes)) {
-    fileContent$releaseNotes<-""
-  } else {
-    fileContent$releaseNotes<-releaseNotes
-  }
+  fileContent$latestVersion<-getLatestVersion()
   # now upload to S3
   bucket <- versionsEndpoint
   uploadToS3File(toJSON(fileContent), "application/json", bucket, targetFileName, awsAccessKeyId, secretAccessKey)
+  message("Successfully completed updating version info file.")
 }
 
 # uploads file content to S3
@@ -140,6 +165,27 @@ createMimeTypeMap<-function() {
   # The online list does not contain a mime type for .R files
   ans[['r']] <- 'text/x-r'
   return(ans)
+}
+
+generateHtmlDocs<-function(awsAccessKeyId, secretAccessKey) {
+  fileURL<-getArtifactURL()
+  # now download
+  localFilePath<-file.path(tempdir(), fileName)
+  download.file(fileURL, localFilePath)
+  # now unzip into tempdir
+  result<-system(sprintf("cd %s; tar xzf %s", tempdir(), localFilePath))
+  if (result!=0) stop(sprintf("Could not gunzip %s", localFilePath))
+  cat("Successfully unzipped tar.gz file.\n")
+  # make a subdir 'staticdocs'
+  docsdir<-file.path(tempdir(), "synapseClient/staticdocs")
+  if (!dir.create(docsdir)) stop(sprintf("could not create %s", docsdir))
+  cat("Successfully created staticdocs sub-directory.\n")
+  library(staticdocs)
+  cat("Loaded staticdocs package.\n")
+  build_site(pkg=file.path(tempdir(), "synapseClient"),examples=FALSE,launch=FALSE)
+  cat("Created the html documentation.\n")
+  # now upload tempdir()/synapseClient/inst/web to S3 (is the bucket called "http://r-docs.synapse.org"??)
+  uploadFolderToS3(file.path(tempdir(), "synapseClient/inst/web"), NULL, "r-docs.synapse.org", "AKIAIYHLMFZOUMW2HXUA", "JmFISdOGJXIff6ggf6KtQEVoNLEcdEaolI5fHvO2", createMimeTypeMap())
 }
 
 

@@ -107,9 +107,9 @@ uploadFolderToS3<-function(root, relativePath, bucket, awsAccessKeyId, secretAcc
     connection<-file(path)
     fileContent<-paste(readLines(connection), collapse="\n")
     close(connection)
-    contentType<-"text/plain"
     targetFileName<-relativePath
-    uploadToS3File(content, contentType, bucket, awsAccessKeyId, secretAccessKey, mimeTypeMap) 
+    contentType<-getMimeTypeForFile(targetFileName, mimeTypeMap)
+    uploadToS3File(fileContent, contentType, bucket, targetFileName, awsAccessKeyId, secretAccessKey) 
   }
 }
 
@@ -172,6 +172,7 @@ generateHtmlDocs<-function(bucket, awsAccessKeyId, secretAccessKey) {
   # now download
   scratchdir<-file.path(tempdir(), "scratch")
   if (!dir.create(scratchdir)) stop(sprintf("could not create %s", scratchdir))  
+  setwd(scratchdir) # this dictates where 'build_site' writes its output
   localFilePath<-file.path(scratchdir, basename(fileURL))
   download.file(fileURL, localFilePath)
   # now unzip into scratchdir
@@ -187,7 +188,7 @@ generateHtmlDocs<-function(bucket, awsAccessKeyId, secretAccessKey) {
   build_site(pkg=file.path(scratchdir, "synapseClient"),examples=FALSE,launch=FALSE)
   cat("Created the html documentation.\n")
   # now upload <scratchdir>/synapseClient/inst/web to S3 (is the bucket called "http://r-docs.synapse.org"??)
-  uploadFolderToS3(file.path(scratchdir, "synapseClient/inst/web"), NULL, bucket, awsAccessKeyId, secretAccessKey, createMimeTypeMap())
+  uploadFolderToS3(file.path(scratchdir, "inst/web"), NULL, bucket, awsAccessKeyId, secretAccessKey, createMimeTypeMap())
 }
 
 

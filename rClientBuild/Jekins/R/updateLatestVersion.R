@@ -167,10 +167,10 @@ createMimeTypeMap<-function() {
   return(ans)
 }
 
-generateHtmlDocs<-function(awsAccessKeyId, secretAccessKey) {
+generateHtmlDocs<-function(bucket, awsAccessKeyId, secretAccessKey) {
   fileURL<-getArtifactURL()
   # now download
-  localFilePath<-file.path(tempdir(), fileName)
+  localFilePath<-file.path(tempdir(), basename(fileURL))
   download.file(fileURL, localFilePath)
   # now unzip into tempdir
   result<-system(sprintf("cd %s; tar xzf %s", tempdir(), localFilePath))
@@ -185,7 +185,7 @@ generateHtmlDocs<-function(awsAccessKeyId, secretAccessKey) {
   build_site(pkg=file.path(tempdir(), "synapseClient"),examples=FALSE,launch=FALSE)
   cat("Created the html documentation.\n")
   # now upload tempdir()/synapseClient/inst/web to S3 (is the bucket called "http://r-docs.synapse.org"??)
-  uploadFolderToS3(file.path(tempdir(), "synapseClient/inst/web"), NULL, "r-docs.synapse.org", "AKIAIYHLMFZOUMW2HXUA", "JmFISdOGJXIff6ggf6KtQEVoNLEcdEaolI5fHvO2", createMimeTypeMap())
+  uploadFolderToS3(file.path(tempdir(), "synapseClient/inst/web"), NULL, bucket, awsAccessKeyId, secretAccessKey, createMimeTypeMap())
 }
 
 

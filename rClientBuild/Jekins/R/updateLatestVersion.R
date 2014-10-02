@@ -59,7 +59,7 @@ uploadToS3File<-function(content, contentType, bucket, targetFileName, awsAccess
   expirationTimestamp <- sprintf("%sZ", format(Sys.time()+futureOffsetSeconds,"%Y-%m-%dT%H:%M:%OS2", tz="UTC"))
   # this is a hack. drop leap seconds
   expirationTimestamp <- gsub(":6[01][\\.]", ":59.", expirationTimestamp)
-  policyRaw <- sprintf("{\"expiration\": \"%s\",\"conditions\": [{\"bucket\": \"%s\" },{\"acl\": \"public-read\" },[\"eq\",\"$key\", \"%s\"],[\"content-length-range\", 0, \"10000\"],[\"starts-with\", \"$Content-Type\", \"%s\"],]}",
+  policyRaw <- sprintf("{\"expiration\": \"%s\",\"conditions\": [{\"bucket\": \"%s\" },{\"acl\": \"public-read\" },[\"eq\",\"$key\", \"%s\"],[\"content-length-range\", 0, \"1000000\"],[\"starts-with\", \"$Content-Type\", \"%s\"],]}",
     expirationTimestamp, bucket, targetFileName, contentType)
   policyBase64<-base64(policyRaw, encode=TRUE)[1]
   signatureRaw<-hmac(secretAccessKey, policyBase64, algo="sha1", raw=TRUE)
@@ -109,7 +109,7 @@ uploadFolderToS3<-function(root, relativePath, bucket, awsAccessKeyId, secretAcc
     close(connection)
     targetFileName<-relativePath
     contentType<-getMimeTypeForFile(targetFileName, mimeTypeMap)
-    uploadToS3File(fileContent, contentType, bucket, targetFileName, awsAccessKeyId, secretAccessKey) 
+    uploadToS3File(fileContent, contentType, bucket, targetFileName, awsAccessKeyId, secretAccessKey)
   }
 }
 

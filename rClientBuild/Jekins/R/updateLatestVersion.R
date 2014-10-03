@@ -8,6 +8,8 @@
 library("RJSONIO")
 library("RCurl") # includes base64()
 library("digest") # includes hmac()
+library("staticdocs")
+library("RAmazonS3")
 
 getDepotRepo<-function() {
     repo<-contrib.url("http://depot.sagebase.org/CRAN/prod/3.1")
@@ -167,6 +169,18 @@ createMimeTypeMap<-function() {
   return(ans)
 }
 
+cleanBucket<-function(bucket, awsAccessKeyId, secretAccessKey) {
+  auth<-c()
+  auth[awsAccessKeyId]<-secretAccessKey
+  fileList<-listBucket(name=bucket, auth=auth)
+  for (fileKey in fileList[["Key"]]) {
+    tryCatch(
+      removeFile(bucket=bucket, name=fileKey, auth=auth),
+      error=function(e) {cat(sprintf("Failed to remove %s. %s", fileKey, e))}
+      )
+  }
+}
+
 generateHtmlDocs<-function(bucket, awsAccessKeyId, secretAccessKey) {
   fileURL<-getArtifactURL()
   # now download
@@ -183,12 +197,13 @@ generateHtmlDocs<-function(bucket, awsAccessKeyId, secretAccessKey) {
   docsdir<-file.path(scratchdir, "synapseClient/staticdocs")
   if (!dir.create(docsdir)) stop(sprintf("could not create %s", docsdir))
   cat("Successfully created staticdocs sub-directory.\n")
-  library(staticdocs)
-  cat("Loaded staticdocs package.\n")
   build_site(pkg=file.path(scratchdir, "synapseClient"),examples=FALSE,launch=FALSE)
   cat("Created the html documentation.\n")
   # now upload <scratchdir>/synapseClient/inst/web to S3 (is the bucket called "http://r-docs.synapse.org"??)
+  cleanBucket(bucket, awsAccessKeyId, secretAccessKey)
+  cat(sprintf("Cleared bucket %s.\n", bucket))
   uploadFolderToS3(file.path(scratchdir, "inst/web"), NULL, bucket, awsAccessKeyId, secretAccessKey, createMimeTypeMap())
+  cat(sprintf("Uploaded doc's to AWS S3 bucket %s.\n", bucket))
 }
 
 

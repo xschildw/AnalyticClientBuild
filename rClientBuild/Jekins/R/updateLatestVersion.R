@@ -31,12 +31,20 @@ getLatestVersion<-function() {
   scVersion
 }
 
-getArtifactURL<-function() {
+getArtifactURL<-function(platform) {
   repo<-getDepotRepo()
   scVersion<-getLatestVersion()
   # the artifact's URL will look something like:
   # http://depot.sagebase.org/CRAN/prod/3.1/src/contrib/synapseClient_1.4-4.tar.gz
-  fileName<-sprintf("synapseClient_%s.tar.gz", scVersion)
+  if (platform=="src") {
+	  fileName<-sprintf("synapseClient_%s.tar.gz", scVersion)
+  } else if (platform=="mac") {
+	  fileName<-sprintf("synapseClient_%s.tgz", scVersion)
+  } else if (platform=="win") {
+	  fileName<-sprintf("synapseClient_%s.zip", scVersion)
+  } else {
+	  stop(sprintf("Unexpected platform: %s" platform))
+  }
   fileURL<-sprintf("%s/%s", repo, fileName)
   fileURL
 }
@@ -181,8 +189,8 @@ cleanBucket<-function(bucket, awsAccessKeyId, secretAccessKey) {
   }
 }
 
-generateHtmlDocs<-function(bucket, awsAccessKeyId, secretAccessKey) {
-  fileURL<-getArtifactURL()
+generateHtmlDocs<-function(bucket, awsAccessKeyId, secretAccessKey, platform) {
+  fileURL<-getArtifactURL(platform)
   # now download
   scratchdir<-file.path(tempdir(), "scratch")
   if (!dir.create(scratchdir)) stop(sprintf("could not create %s", scratchdir))  

@@ -43,7 +43,7 @@ getArtifactURL<-function(platform) {
   } else if (platform=="win") {
 	  fileName<-sprintf("synapseClient_%s.zip", scVersion)
   } else {
-	  stop(sprintf("Unexpected platform: %s" platform))
+	  stop(sprintf("Unexpected platform: %s", platform))
   }
   fileURL<-sprintf("%s/%s", repo, fileName)
   fileURL

@@ -20,20 +20,21 @@ getDepotRepo<-function() {
   repo
 }
 
-getLatestVersion<-function() {
+getLatestVersionAndReleaseNotes<-function() {
   repo<-getDepotRepo()
-  ap <- available.packages(repo)
+  ap <- available.packages(repo, fields='ReleaseNotes')
   if (any(dimnames(ap)[[1]]=="synapseClient")) {
     scVersion <- ap['synapseClient','Version']
+	releaseNotes<-ap['synapseClient','ReleaseNotes']
   } else {
     stop(sprintf("Unable to find current R client version in this repo %s", repo))
   } 
-  scVersion
+  list(version=scVersion, releaseNotes=releaseNotes)
 }
 
 getArtifactURL<-function(platform) {
   repo<-getDepotRepo()
-  scVersion<-getLatestVersion()
+  scVersion<-getLatestVersionAndReleaseNotes()$scVersion
   # the artifact's URL will look something like:
   # http://depot.sagebase.org/CRAN/prod/3.1/src/contrib/synapseClient_1.4-4.tar.gz
   if (platform=="src") {
@@ -55,7 +56,9 @@ updateLatestVersion<-function(versionsEndpoint, awsAccessKeyId, secretAccessKey)
   targetFileName<-"synapseRClient"
   uri <- sprintf("%s/%s", versionsEndpoint, targetFileName)
   fileContent<-fromJSON(getURL(uri))
-  fileContent$latestVersion<-getLatestVersion()
+  latestVersionAndReleaseNotes<-getLatestVersionAndReleaseNotes()
+  fileContent$latestVersion<-latestVersionAndReleaseNotes$scVersion
+  fileContent$releaseNotes<-latestVersionAndReleaseNotes$releaseNotes
   # now upload to S3
   bucket <- versionsEndpoint
   uploadToS3File(toJSON(fileContent), "application/json", bucket, targetFileName, awsAccessKeyId, secretAccessKey)

@@ -29,7 +29,7 @@ getLatestVersionAndReleaseNotes<-function() {
   } else {
     stop(sprintf("Unable to find current R client version in this repo %s", repo))
   } 
-  list(version=scVersion, releaseNotes=releaseNotes)
+  list(scVersion=scVersion, releaseNotes=releaseNotes)
 }
 
 getArtifactURL<-function(platform) {

@@ -12,11 +12,11 @@ library("staticdocs")
 library("RAmazonS3")
 
 getDepotRepo<-function() {
-    repo<-contrib.url("http://depot.sagebase.org/CRAN/prod/3.1")
+    repo<-contrib.url("http://depot.sagebase.org/CRAN/prod/3.3")
   # the above should return something like:
   # http://depot.sagebase.org/CRAN/prod/3.1/src/contrib
-  repo <-gsub("2.15", "3.1", repo, fixed=T)
-  repo <-gsub("3.0", "3.1", repo, fixed=T)
+  repo <-gsub("2.15", "3.3", repo, fixed=T)
+  repo <-gsub("3.0", "3.3", repo, fixed=T)
   repo
 }
 

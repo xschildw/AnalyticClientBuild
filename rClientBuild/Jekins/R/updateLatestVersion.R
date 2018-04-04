@@ -83,7 +83,7 @@ uploadToS3File<-function(content, contentType, bucket, prefixKey, targetFileName
   }
   uri <-sprintf("http://s3.amazonaws.com/%s", bucket)
   postfields <- list(
-    key=targetFileName
+    key=targetFileName,
     acl="public-read",
     AWSAccessKeyId=awsAccessKeyId,
     Policy=policyBase64,

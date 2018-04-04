@@ -66,7 +66,7 @@ updateLatestVersion<-function(versionsEndpoint, awsAccessKeyId, secretAccessKey)
 }
 
 # uploads file content to S3
-uploadToS3File<-function(content, contentType, bucket, targetFileName, awsAccessKeyId, secretAccessKey) {
+uploadToS3File<-function(content, contentType, bucket, prefixKey, targetFileName, awsAccessKeyId, secretAccessKey) {
   #UTC timestamp "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'" a bit in the future (e.g. an hour from now)
   futureOffsetSeconds <- 100
   expirationTimestamp <- sprintf("%sZ", format(Sys.time()+futureOffsetSeconds,"%Y-%m-%dT%H:%M:%OS2", tz="UTC"))
@@ -78,9 +78,12 @@ uploadToS3File<-function(content, contentType, bucket, targetFileName, awsAccess
   signatureRaw<-hmac(secretAccessKey, policyBase64, algo="sha1", raw=TRUE)
   signatureBase64 <- base64(signatureRaw, encode=TRUE)
   
+  if (!is.null(prefixKey) && (prefixKey != "") ) {
+    targetFileName <- paste(prefixKey, targetFileName, sep="/")
+  }
   uri <-sprintf("http://s3.amazonaws.com/%s", bucket)
   postfields <- list(
-    key=targetFileName,
+    key=targetFileName
     acl="public-read",
     AWSAccessKeyId=awsAccessKeyId,
     Policy=policyBase64,
@@ -98,7 +101,7 @@ uploadToS3File<-function(content, contentType, bucket, targetFileName, awsAccess
 # recursively upload the contents of a folder
 # in the initial call 'root' is the root directory of interest, 
 # 'relativePath' is NULL, and mimTypeMap=createMimeTypeMap()
-uploadFolderToS3<-function(root, relativePath, bucket, awsAccessKeyId, secretAccessKey, mimeTypeMap) {
+uploadFolderToS3<-function(root, relativePath, bucket, prefixKey, awsAccessKeyId, secretAccessKey, mimeTypeMap) {
   if (is.null(relativePath)) {
     path<-root
   } else {
@@ -113,7 +116,7 @@ uploadFolderToS3<-function(root, relativePath, bucket, awsAccessKeyId, secretAcc
       } else {
         subdir<-file.path(relativePath, f)
       }
-      uploadFolderToS3(root, subdir, bucket, awsAccessKeyId, secretAccessKey, mimeTypeMap)
+      uploadFolderToS3(root, subdir, bucket, prefixKey, awsAccessKeyId, secretAccessKey, mimeTypeMap)
     }
   } else {
     # it's a file, so upload the content
@@ -122,7 +125,7 @@ uploadFolderToS3<-function(root, relativePath, bucket, awsAccessKeyId, secretAcc
     close(connection)
     targetFileName<-relativePath
     contentType<-getMimeTypeForFile(targetFileName, mimeTypeMap)
-    uploadToS3File(fileContent, contentType, bucket, targetFileName, awsAccessKeyId, secretAccessKey)
+    uploadToS3File(fileContent, contentType, bucket, prefixKey, targetFileName, awsAccessKeyId, secretAccessKey)
   }
 }
 
@@ -192,7 +195,7 @@ cleanBucket<-function(bucket, awsAccessKeyId, secretAccessKey) {
   }
 }
 
-generateHtmlDocs<-function(bucket, awsAccessKeyId, secretAccessKey, platform) {
+generateHtmlDocs<-function(bucket, prefixKey, awsAccessKeyId, secretAccessKey, platform) {
   fileURL<-getArtifactURL(platform)
   # now download
   scratchdir<-file.path(tempdir(), "scratch")
@@ -213,7 +216,7 @@ generateHtmlDocs<-function(bucket, awsAccessKeyId, secretAccessKey, platform) {
   # now upload <scratchdir>/synapseClient/inst/web to S3 (is the bucket called "http://r-docs.synapse.org"??)
   cleanBucket(bucket, awsAccessKeyId, secretAccessKey)
   cat(sprintf("Cleared bucket %s.\n", bucket))
-  uploadFolderToS3(file.path(scratchdir, "inst/web"), NULL, bucket, awsAccessKeyId, secretAccessKey, createMimeTypeMap())
+  uploadFolderToS3(file.path(scratchdir, "inst/web"), NULL, bucket, prefixKey, awsAccessKeyId, secretAccessKey, createMimeTypeMap())
   cat(sprintf("Uploaded doc's to AWS S3 bucket %s.\n", bucket))
 }
 
